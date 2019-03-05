@@ -7,9 +7,9 @@ const huejay = require('huejay')
 async function main() {
   try {
     const client = await getHueClient()
-    const light = await getLight(client, 'desk')
+    const deskLights = await getLights(client, 'desk')
 
-    await setLightToColorLoop(client, light)
+    await setLightsToColorLoops(client, deskLights)
   } catch (e) {
     console.error(e)
     process.exit(1)
@@ -21,20 +21,18 @@ async function getHueClient() {
   return new huejay.Client({ host: bridgeIp, username: process.env.HUE_USER })
 }
 
-async function getLight(client, lightName) {
-  return await client.lights.getAll().then(lights => {
-    let deskLight = null
-    for (let light of lights) {
-      const n = light.attributes.attributes.name.toLowerCase()
-      if (n.match(lightName.toLowerCase())) deskLight = light
-    }
-    return deskLight
-  })
+async function getLights(client, lightName) {
+  return client.lights.getAll().then(lights => lights.filter(light => {
+    const n = light.attributes.attributes.name.toLowerCase()
+    return !!n.match(lightName.toLowerCase())
+  }))
 }
 
-function setLightToColorLoop(client, light) {
-  light.effect = 'colorloop'
-  return client.lights.save(light)
+function setLightsToColorLoops(client, lights) {
+  return Promise.all(lights.map(light => {
+    light.effect = 'colorloop'
+    return client.lights.save(light)
+  }))
 }
 
 main()
